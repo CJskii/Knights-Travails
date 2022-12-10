@@ -21,6 +21,8 @@ class Square {
     this.x = xPos;
     this.y = yPos;
     this.visited = false;
+    this.next = null;
+    this.previous = null;
   }
 }
 
