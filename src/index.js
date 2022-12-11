@@ -1,4 +1,3 @@
-import { validate } from "schema-utils";
 import Board from "./board.js";
 
 class KnightTravails {
@@ -8,79 +7,122 @@ class KnightTravails {
     // list of available moves
     this.xMove = [2, 1, -1, -2, -2, -1, 1, 2];
     this.yMove = [1, 2, 2, 1, -1, -2, -2, -1];
-    this.size = this.board.size;
   }
 
-  tour(start, end, count = 0, board, queue = [], path = []) {
-    if (!start || !end) return console.log("Provide valid start/end value");
-    const xPos = start[0];
-    const yPos = start[1];
-    const endX = end[0];
-    const endY = end[1];
-    if (!board) {
-      board = new Board();
-      const square = board.board.filter((square) => {
-        if (square.x == xPos && square.y == yPos) {
-          square.previous = "root";
-        }
-        return square.x == xPos && square.y == yPos;
-      });
-    }
+  solveKT(start, end, movei = 0, board = this.board) {
+    if (movei > 64) return console.log(movei);
+    if (start[0] == end[0] && start[1] == end[1])
+      return console.log({ steps: movei });
+    let xPos, yPos, endX, endY;
+    let currentNode, previousNode, targetNode;
+    let currentNeighbours, previousNeighbours, targetNeighbours;
 
-    if (xPos == endX && yPos == endY) return console.log({ count, path });
-    else {
-      let newX, newY;
-      // look for possible moves
-      for (let i = 0; i < this.xMove.length; i++) {
-        newX = xPos + this.xMove[i];
-        newY = yPos + this.yMove[i];
-        if (this.validateMove(newX, newY, board.board)) {
-          // push available moves to the queue
-          queue.push([newX, newY]);
-        }
-      }
-      // visit starting square, increase count and push it as a path
-      path.push([xPos, yPos]);
-      count = count + 1;
-      const visit = board.board.filter((square) => {
-        if (square.x == xPos && square.y == yPos) {
-          square.visited = true;
-        }
-        return square.x == xPos && square.y == yPos;
-      });
-      // check if move in the queue will fulfil base condition
-      for (let i = 0; i < queue.length; i++) {
-        newX = queue[i][0];
-        newY = queue[i][1];
-        if (newX == endX && newY == endY) {
-          // push new move to the path
-          path.push([newX, newY]);
-          // clear queue and call recursively to solve knight's tour
-          this.tour([newX, newY], end, (count += 1), board, (queue = []), path);
-        }
-      }
+    xPos = start[0];
+    yPos = start[1];
+    endX = end[0];
+    endY = end[1];
 
-      if (queue.length) {
-        this.tour(queue.shift(), end, count, board, queue, path);
-      }
+    console.log({ xPos, yPos, endX, endY });
+
+    currentNode = board.board.filter((square) => {
+      return square.x == xPos && square.y == yPos;
+    });
+
+    targetNode = board.board.filter((square) => {
+      return square.x == endX && square.y == endY;
+    });
+
+    currentNeighbours = currentNode[0].neighbours;
+    targetNeighbours = targetNode[0].neighbours;
+    currentNode[0].visited = true;
+
+    // check if current node has the same neighbour as target node
+    const lookup = this.compareNeighbours(
+      end,
+      currentNeighbours,
+      targetNeighbours,
+      board
+    );
+    if (lookup) {
+      //console.log("from the lookup");
+      start = [lookup[0].x, lookup[0].y];
+      return this.solveKT(start, end, (movei += 1), board);
+      // pick this node as next step
+    } else {
+      //console.log("from else");
+      // select neighbour with closest value to target
+      //console.log(currentNeighbours);
+      this.solve(
+        currentNeighbours,
+        targetNeighbours,
+        currentNode,
+        targetNode,
+        board,
+        movei
+      );
     }
   }
 
-  validateMove(x, y, board) {
-    if (x > 0 && x <= 8 && y > 0 && y <= 8) {
-      const filtered = board.filter((square) => {
-        return square.x == x && square.y == y;
+  solve(currentN, targetN, cNode, tNode, board, movei) {
+    //console.log({ currentN, targetN });
+    //console.log({ cNode, tNode });
+    // loop over current node neighbours
+    for (let i = 0; i < currentN.length; i++) {
+      // retrieve neighbour node data
+      cNode = board.board.filter((node) => {
+        return node.x == currentN[i][0] && node.y == currentN[i][1];
       });
-      if (filtered[0].visited === false) {
-        return true;
+      //console.log(cNode);
+      // assign neighbour neigbour's to variable
+      const nextNodes = cNode[0].neighbours;
+      //console.log({ neighbours: nextNodes });
+      // loop over neighbours of neighbour node to find match with target node
+      for (let j = 0; j < nextNodes.length; j++) {
+        if (nextNodes[j][0] == tNode[0].x && nextNodes[j][1] == tNode[0].y) {
+          // travel to this node and call for solution
+          //console.log("end it now");
+          return this.solveKT(
+            currentN[i],
+            [tNode[0].x, tNode[0].y],
+            (movei += 1)
+          );
+        }
+      }
+    }
+    //console.log("from the end");
+    this.solveKT(
+      [cNode[0].x, cNode[0].y],
+      [tNode[0].x, tNode[0].y],
+      (movei += 1)
+    );
+  }
+
+  compareNeighbours(end, currentN, targetN, board) {
+    for (let i = 0; i < currentN.length; i++) {
+      const foundSquare = targetN.filter((coords) => {
+        return coords[0] == currentN[i][0] && coords[1] == currentN[i][1];
+      });
+      if (foundSquare.length > 0) {
+        const node = board.board.filter((square) => {
+          return square.x == foundSquare[0][0] && square.y == foundSquare[0][1];
+        });
+        return node;
       } else {
-        return null;
+        for (let i = 0; i < currentN.length; i++) {
+          if (currentN[i][0] == end[0] && currentN[i][1] == end[1]) {
+            const node = board.board.filter((square) => {
+              return square.x == end[0] && square.y == end[1];
+            });
+            return node;
+          }
+        }
+        //console.log({ currentN, end });
       }
-    } else return null;
+    }
+    return null;
   }
 }
 
 const knight = new KnightTravails();
 //console.log(knight);
-//knight.log();
-knight.tour([1, 1], [3, 3]);
+knight.solveKT([1, 1], [3, 3]);
