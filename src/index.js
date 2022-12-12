@@ -10,19 +10,17 @@ class KnightTravails {
   }
 
   solveKT(start, end, movei = 0, board = this.board) {
+    // overflow condition
     if (movei > 64) return console.log(movei);
-    if (start[0] == end[0] && start[1] == end[1])
-      return console.log({ steps: movei });
+
     let xPos, yPos, endX, endY;
-    let currentNode, previousNode, targetNode;
-    let currentNeighbours, previousNeighbours, targetNeighbours;
+    let currentNode, targetNode;
+    let currentNeighbours, targetNeighbours;
 
     xPos = start[0];
     yPos = start[1];
     endX = end[0];
     endY = end[1];
-
-    console.log({ xPos, yPos, endX, endY });
 
     currentNode = board.board.filter((square) => {
       return square.x == xPos && square.y == yPos;
@@ -32,26 +30,34 @@ class KnightTravails {
       return square.x == endX && square.y == endY;
     });
 
+    // incorrect start/end
+    if (currentNode.length === 0 || targetNode.length === 0)
+      return console.log("Incorrect start/end");
+
+    // print solution
+    if (start[0] == end[0] && start[1] == end[1])
+      return console.log({ Step: [xPos, yPos], "Step count": movei });
+
+    // print current step and step count
+    console.log({ Step: [xPos, yPos], "Step count": movei });
     currentNeighbours = currentNode[0].neighbours;
+    currentNeighbours = this._nonVisitedNeighbours(currentNeighbours, board);
     targetNeighbours = targetNode[0].neighbours;
     currentNode[0].visited = true;
 
     // check if current node has the same neighbour as target node
-    const lookup = this.compareNeighbours(
+    const lookup = this._compareNeighbours(
       end,
       currentNeighbours,
       targetNeighbours,
       board
     );
     if (lookup) {
-      //console.log("from the lookup");
+      // if value is returned, take this node as next step
       start = [lookup[0].x, lookup[0].y];
       return this.solveKT(start, end, (movei += 1), board);
-      // pick this node as next step
     } else {
-      //console.log("from else");
-      // select neighbour with closest value to target
-      //console.log(currentNeighbours);
+      // look for another neighbour
       this.solve(
         currentNeighbours,
         targetNeighbours,
@@ -64,32 +70,42 @@ class KnightTravails {
   }
 
   solve(currentN, targetN, cNode, tNode, board, movei) {
-    //console.log({ currentN, targetN });
-    //console.log({ cNode, tNode });
     // loop over current node neighbours
     for (let i = 0; i < currentN.length; i++) {
-      // retrieve neighbour node data
+      // filter neighbour node data
       cNode = board.board.filter((node) => {
         return node.x == currentN[i][0] && node.y == currentN[i][1];
       });
-      //console.log(cNode);
+
       // assign neighbour neigbour's to variable
       const nextNodes = cNode[0].neighbours;
-      //console.log({ neighbours: nextNodes });
+
       // loop over neighbours of neighbour node to find match with target node
       for (let j = 0; j < nextNodes.length; j++) {
+        // if match found - take this node and call for solution
         if (nextNodes[j][0] == tNode[0].x && nextNodes[j][1] == tNode[0].y) {
-          // travel to this node and call for solution
-          //console.log("end it now");
           return this.solveKT(
             currentN[i],
             [tNode[0].x, tNode[0].y],
             (movei += 1)
           );
+        } else {
+          // look for solution in target node neighbours
+          for (let k = 0; k < targetN.length; k++) {
+            if (
+              nextNodes[j][0] == targetN[k][0] &&
+              nextNodes[j][1] == targetN[k][1]
+            ) {
+              return this.solveKT(
+                [targetN[k][0], targetN[k][1]],
+                [tNode[0].x, tNode[0].y],
+                (movei += 1)
+              );
+            }
+          }
         }
       }
     }
-    //console.log("from the end");
     this.solveKT(
       [cNode[0].x, cNode[0].y],
       [tNode[0].x, tNode[0].y],
@@ -97,7 +113,32 @@ class KnightTravails {
     );
   }
 
-  compareNeighbours(end, currentN, targetN, board) {
+  // helper functions
+  _nonVisitedNeighbours(arr, board, newArr = []) {
+    let visited;
+    for (let i = 0; i < arr.length; i++) {
+      let x = arr[i][0];
+      let y = arr[i][1];
+      visited = this._isVisited(x, y, board);
+      if (visited === false) {
+        newArr.push([x, y]);
+      }
+    }
+    return newArr;
+  }
+
+  _isVisited(xPos, yPos, board) {
+    const node = board.board.filter((square) => {
+      return square.x == xPos && square.y == yPos;
+    });
+    if (node[0].visited == false) {
+      return false;
+    } else {
+      return true;
+    }
+  }
+
+  _compareNeighbours(end, currentN, targetN, board) {
     for (let i = 0; i < currentN.length; i++) {
       const foundSquare = targetN.filter((coords) => {
         return coords[0] == currentN[i][0] && coords[1] == currentN[i][1];
@@ -116,7 +157,6 @@ class KnightTravails {
             return node;
           }
         }
-        //console.log({ currentN, end });
       }
     }
     return null;
@@ -124,5 +164,9 @@ class KnightTravails {
 }
 
 const knight = new KnightTravails();
-//console.log(knight);
-knight.solveKT([1, 1], [3, 3]);
+knight.solveKT([1, 1], [5, 8]);
+// { Step: [ 1, 1 ], 'Step count': 0 }
+// { Step: [ 2, 3 ], 'Step count': 1 }
+// { Step: [ 4, 2 ], 'Step count': 2 }
+// { Step: [ 6, 6 ], 'Step count': 3 }
+// { Step: [ 5, 8 ], 'Step count': 4 }
